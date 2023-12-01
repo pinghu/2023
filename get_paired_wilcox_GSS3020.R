@@ -25,7 +25,7 @@ args <- commandArgs(trailingOnly = TRUE)
 filename <- args[1]
 #filename="metaphlan.relab10.7"
 #filename="pathabundance.community.relab10"
-filename="GSS3020_read_count_data.txt"
+#filename="GSS3020_read_count_data.txt"
 library(ggplot2)
 library("ggpubr")
 my.t.test.p.value <- function(...) {
@@ -105,7 +105,7 @@ for (i in 1:d[1]){
     genename=A[i, 1]
     if(is.na(genename)){next;}
     gene<-as.numeric(C[i,])
-    splitG<-strsplit(as.character(genename), "[.|]")
+    splitG<-strsplit(as.character(genename), "[|]") ##original [.|]
     LLL=length(splitG[[1]])
     genus=splitG[[1]][LLL]
     genus1=str_replace(genus, "[kposgfc]__", "")
@@ -204,24 +204,41 @@ for (i in 1:d[1]){
     ChinP<-gene[DiseaseBodySite=="PIH_LeftCheek"]; MChinP=mean(ChinP)
     truefc_CheekP_ChinP=truefc(MCheekP/MChinP)
     Pwilcox_CheekP_ChinP<-my.wilcox.p.value(CheekP, ChinP, na.rm=TRUE,paired = FALSE, alternative = "two.sided")
-
+    pvalues <- c(Pwilcox_Cheek_Chin,  KP_EthinicityDisease,  Pwilcox_CheekChineseH_CheekChineseP, Pwilcox_ChinChineseH_ChinChineseP)
+    formatted_pvalues <- sprintf("%.2f", pvalues)
+    custom_order <- c(
+      "HLY_Chinese_Chin", "PIH_Chinese_Chin", "PIH_AA_Chin", "PIH_Caucasian_Chin",
+      "HLY_Chinese_LeftCheek", "PIH_Chinese_LeftCheek", "PIH_AA_LeftCheek", "PIH_Caucasian_LeftCheek"
+    )
     if(percentZeroNA<0.75){
-      pvalues <- c(Pwilcox_Cheek_Chin,  KP_EthinicityDisease,  Pwilcox_CheekChineseH_CheekChineseP, Pwilcox_ChinChineseH_ChinChineseP)
-      formatted_pvalues <- sprintf("%.2f", pvalues)
+      if(min(formatted_pvalues)<=0.05){
       
-      df2 <- data_summary(mydata, varname="gene", 
-                          groupnames=c("DiseaseEthBodySite", "DiseaseBodySite"))
-      p <- ggplot(df2, aes(x = gene, y = DiseaseEthBodySite, group = DiseaseBodySite, color = DiseaseBodySite)) +
-        geom_point(size = 5) +
-        geom_errorbar(aes(xmin = gene - se, xmax = gene + se), width = .2,
-                      position = position_dodge(0.05)) +
-        labs(x = genename, y = "") +
-        theme_classic() +
-        theme(legend.position = "none") +
-        ggtitle(paste(genename,"Psite:", formatted_pvalues[1],"Peth:",formatted_pvalues[2],"PcheekDH:",formatted_pvalues[3],"PChinDH:",formatted_pvalues[4] )) +
-        theme(plot.margin = margin(0.5, 0.5, 0.5, 1.5, "cm"),plot.title = element_text(size = 6))  # Adjust the margins as needed
-      
-      ggsave(paste0(genename, ".png"), p, width = 6, height = 4)
+          df2 <- data_summary(mydata, varname = "gene", groupnames = c("DiseaseEthBodySite", "DiseaseBodySite"))
+          
+          # Use factor to set custom order
+          df2$DiseaseEthBodySite <- factor(df2$DiseaseEthBodySite, levels = custom_order)
+          
+          p <- ggplot(df2, aes(x = gene, y = DiseaseEthBodySite, group = DiseaseBodySite, color = DiseaseBodySite)) +
+            geom_point(size = 5) +
+            geom_errorbar(aes(xmin = gene - se, xmax = gene + se), width = .2,
+                          position = position_dodge(0.05)) +
+            labs(x = genename, y = "") +
+            theme_classic() +
+            theme(legend.position = "none") +
+            ggtitle(paste(
+              genus2,
+              "Psite:", formatted_pvalues[1],
+              "Peth:", formatted_pvalues[2],
+              "PcheekDH:", formatted_pvalues[3],
+              "PChinDH:", formatted_pvalues[4]
+            )) +
+            theme(plot.margin = margin(0.5, 0.5, 0.5, 1.5, "cm"), plot.title = element_text(size = 10))  # Adjust the title font size
+          
+          # Save the plot
+          ggsave(paste0(genename, ".png"), p, width = 6, height = 4)
+          
+          
+          }
     }
 
     print(paste(genename,genus2,percentZeroNA,KP_Disease,KP_DiseaseChinese,Pwilcox_PostAcne_Healthy,Pwilcox_ChinChineseH_ChinChineseP,Pwilcox_CheekChineseH_CheekChineseP,
